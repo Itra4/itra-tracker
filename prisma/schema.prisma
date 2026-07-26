@@ -1,0 +1,138 @@
+// This is the database schema for ITRA Throughput Tracker
+// It defines how all the information is stored.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USERS & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          String    // "ADMIN" | "WAREHOUSE" | "VIEWER"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  inboundLoads      InboundLoad[]
+  outboundShipments OutboundShipment[]
+  documentChanges   DocumentVersion[]
+  activityLogs      ActivityLog[]
+}
+
+// ============================================
+// INBOUND LOADS
+// ============================================
+
+model InboundLoad {
+  id              String   @id @default(cuid())
+  date            DateTime
+  clientSource    String
+  approximateSize String
+  notes           String?
+
+  // Audit fields
+  createdById     String
+  createdBy       User     @relation(fields: [createdById], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// OUTBOUND SHIPMENTS
+// ============================================
+
+model OutboundShipment {
+  id                String   @id @default(cuid())
+  dateShipped       DateTime
+  category          String
+  downstreamVendor  String
+  weightLbs         Float?   // null until PDF is processed or manually entered
+  note              String?
+  pdfFileName       String?  // name of uploaded buyer PDF if any
+
+  // Audit fields
+  createdById       String
+  createdBy         User     @relation(fields: [createdById], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Line items extracted from PDF (optional)
+  lineItems         OutboundLineItem[]
+}
+
+model OutboundLineItem {
+  id                  String           @id @default(cuid())
+  outboundShipmentId  String
+  outboundShipment    OutboundShipment @relation(fields: [outboundShipmentId], references: [id], onDelete: Cascade)
+  category            String
+  weightLbs           Float
+  createdAt           DateTime         @default(now())
+}
+
+// ============================================
+// DOCUMENT CONTROL
+// ============================================
+
+model ControlledDocument {
+  id              String   @id @default(cuid())
+  documentNumber  String   // e.g. "4.3.2-P"
+  title           String   // e.g. "Receiving Procedure"
+  currentVersion  String   // e.g. "1.0"
+  status          String   // "DRAFT" | "UNDER_REVIEW" | "APPROVED" | "OBSOLETE"
+  currentFileName String?  // stored file name of current version
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  versions        DocumentVersion[]
+}
+
+model DocumentVersion {
+  id                    String             @id @default(cuid())
+  controlledDocumentId  String
+  controlledDocument    ControlledDocument @relation(fields: [controlledDocumentId], references: [id], onDelete: Cascade)
+  version               String
+  changeDescription     String
+  changedById           String
+  changedBy             User               @relation(fields: [changedById], references: [id])
+  approvedBy            String?
+  fileName              String?
+  createdAt             DateTime           @default(now())
+}
+
+// ============================================
+// ACTIVITY LOG (for audit trail)
+// ============================================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String   // e.g. "CREATED_INBOUND", "UPLOADED_PDF", "UPDATED_DOCUMENT"
+  details     String?  // human readable description
+  entityType  String?  // "InboundLoad", "OutboundShipment", "ControlledDocument", etc.
+  entityId    String?
+  createdAt   DateTime @default(now())
+}
+
+// ============================================
+// CATEGORIES (so the dropdown can be managed)
+// ============================================
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  groupName String?  // e.g. "Circuit Boards / Precious Metals", "Batteries"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
