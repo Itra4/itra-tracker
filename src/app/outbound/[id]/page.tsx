@@ -209,9 +209,19 @@ export default function OutboundDetailPage() {
           <h2 className="font-semibold text-gray-900">Buyer PDF</h2>
 
           {shipment.pdfFileName ? (
-            <p className="text-sm text-green-700">
-              PDF uploaded: {shipment.pdfFileName}
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-green-700">
+                PDF uploaded: {shipment.pdfFileName}
+              </p>
+              <a
+                href={"/api/outbound/" + shipment.id + "/pdf"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary inline-block text-center"
+              >
+                View PDF
+              </a>
+            </div>
           ) : (
             <p className="text-sm text-gray-500">No PDF uploaded yet</p>
           )}
