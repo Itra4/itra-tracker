@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+
+const MAX_PDF_BYTES = 4 * 1024 * 1024;
 
 export async function POST(
   req: NextRequest,
@@ -18,6 +18,14 @@ export async function POST(
     const { id } = await params;
     const userId = (session.user as any).id;
 
+    const existing = await prisma.outboundShipment.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Shipment not found" }, { status: 404 });
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
@@ -25,41 +33,51 @@ export async function POST(
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // Save the file
+    const isPdf =
+      file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      return NextResponse.json(
+        { error: "Only PDF files are allowed" },
+        { status: 400 }
+      );
+    }
+
+    if (file.size > MAX_PDF_BYTES) {
+      return NextResponse.json(
+        { error: "PDF must be 4 MB or smaller" },
+        { status: 400 }
+      );
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+    const base64 = buffer.toString("base64");
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadsDir, { recursive: true });
-
-    const fileName = `${id}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const filePath = path.join(uploadsDir, fileName);
-    await writeFile(filePath, buffer);
-
-    // Update the shipment with the PDF filename
     await prisma.outboundShipment.update({
       where: { id },
-      data: { pdfFileName: fileName },
+      data: {
+        pdfFileName: safeName,
+        pdfData: base64,
+      },
     });
 
     await prisma.activityLog.create({
       data: {
         userId,
         action: "UPLOADED_PDF",
-        details: `Uploaded buyer PDF for outbound ${id}: ${file.name}`,
+        details: "Uploaded buyer PDF for outbound " + id + ": " + safeName,
         entityType: "OutboundShipment",
         entityId: id,
       },
     });
 
-    // For now we return success.
-    // Automatic line-item extraction will be added in a later improvement
-    // once we can reliably test against real eSCO PDFs on your Mac.
     return NextResponse.json({
       success: true,
-      fileName,
+      fileName: safeName,
       message:
-        "PDF uploaded successfully. Please enter the weight manually for now. Automatic extraction will be improved next.",
+        "PDF uploaded successfully. Enter the weight from the PDF above if needed.",
     });
   } catch (error) {
     console.error("Error uploading PDF:", error);

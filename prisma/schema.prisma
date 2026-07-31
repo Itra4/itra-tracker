@@ -59,7 +59,8 @@ model OutboundShipment {
   downstreamVendor  String
   weightLbs         Float?   // null until PDF is processed or manually entered
   note              String?
-  pdfFileName       String?  // name of uploaded buyer PDF if any
+  pdfFileName       String?
+  pdfData           String?  // name of uploaded buyer PDF if any
 
   // Audit fields
   createdById       String
