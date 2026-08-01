@@ -94,14 +94,14 @@ export default function NewInboundPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Approximate Size *
+              Quantity / what's in the load *
             </label>
             <input
               type="text"
               value={approximateSize}
               onChange={(e) => setApproximateSize(e.target.value)}
               required
-              placeholder="e.g. 4 Gaylords mixed or 2 pallets laptops"
+              placeholder="e.g. 3 Gaylords mixed electronics – to be sorted"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
