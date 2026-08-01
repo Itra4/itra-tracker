@@ -10,6 +10,13 @@ interface DashboardData {
   byVendor: Record<string, number>;
   totalInboundAllTime: number;
   totalOutboundLbsAllTime: number;
+  bestBuyerByCategory?: {
+    category: string;
+    bestBuyer: string;
+    avgPerLb: number;
+    loads: number;
+    totalLbs: number;
+  }[];
 }
 
 export default function ReportsPage() {
@@ -126,6 +133,40 @@ export default function ReportsPage() {
                   <p className="text-xs text-gray-500">Outbound lbs</p>
                 </div>
               </div>
+            </div>
+
+            {/* Best Buyer by Category */}
+            <div className="card">
+              <h2 className="font-semibold text-gray-900 mb-1">Best Buyer by Category</h2>
+              <p className="text-xs text-gray-500 mb-3">
+                Highest average $/lb. Only includes shipments where you entered both weight and settlement $.
+              </p>
+              {data.bestBuyerByCategory && data.bestBuyerByCategory.length > 0 ? (
+                <div className="space-y-3">
+                  {data.bestBuyerByCategory.map((row) => (
+                    <div
+                      key={row.category}
+                      className="flex justify-between items-start border-b border-gray-100 pb-2 last:border-0"
+                    >
+                      <div>
+                        <p className="font-medium text-gray-900">{row.category}</p>
+                        <p className="text-sm text-gray-600">{row.bestBuyer}</p>
+                        <p className="text-xs text-gray-400">
+                          {row.loads} load{row.loads !== 1 ? "s" : ""} · {row.totalLbs.toLocaleString()} lbs
+                        </p>
+                      </div>
+                      <p className="text-lg font-bold text-green-700">
+                        ${row.avgPerLb.toFixed(2)}
+                        <span className="text-xs font-normal text-gray-500">/lb</span>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No data yet. Open an outbound shipment, enter Weight and Settlement Amount from the buyer PDF, then Save.
+                </p>
+              )}
             </div>
           </>
         )}

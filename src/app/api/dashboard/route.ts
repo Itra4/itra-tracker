@@ -65,12 +65,72 @@ export async function GET() {
     // All-time quick totals
     const totalInboundAllTime = await prisma.inboundLoad.count();
     const allOutbound = await prisma.outboundShipment.findMany({
-      select: { weightLbs: true },
+      select: {
+        weightLbs: true,
+        settlementAmount: true,
+        category: true,
+        downstreamVendor: true,
+      },
     });
     const totalOutboundLbsAllTime = allOutbound.reduce(
       (sum, s) => sum + (s.weightLbs || 0),
       0
     );
+
+
+    // Best Buyer by Category (only rows with both weight + settlement $)
+    type VendorStats = { totalLbs: number; totalDollars: number; loads: number };
+    const categoryVendorMap: Record<string, Record<string, VendorStats>> = {};
+
+    for (const s of allOutbound) {
+      if (
+        s.weightLbs != null &&
+        s.weightLbs > 0 &&
+        s.settlementAmount != null &&
+        s.settlementAmount > 0
+      ) {
+        if (!categoryVendorMap[s.category]) categoryVendorMap[s.category] = {};
+        if (!categoryVendorMap[s.category][s.downstreamVendor]) {
+          categoryVendorMap[s.category][s.downstreamVendor] = {
+            totalLbs: 0,
+            totalDollars: 0,
+            loads: 0,
+          };
+        }
+        const entry = categoryVendorMap[s.category][s.downstreamVendor];
+        entry.totalLbs += s.weightLbs;
+        entry.totalDollars += s.settlementAmount;
+        entry.loads += 1;
+      }
+    }
+
+    const bestBuyerByCategory: {
+      category: string;
+      bestBuyer: string;
+      avgPerLb: number;
+      loads: number;
+      totalLbs: number;
+    }[] = [];
+
+    for (const [category, vendors] of Object.entries(categoryVendorMap)) {
+      let best: { buyer: string; avgPerLb: number; loads: number; totalLbs: number } | null = null;
+      for (const [buyer, stats] of Object.entries(vendors)) {
+        const avg = stats.totalDollars / stats.totalLbs;
+        if (!best || avg > best.avgPerLb) {
+          best = { buyer, avgPerLb: avg, loads: stats.loads, totalLbs: stats.totalLbs };
+        }
+      }
+      if (best) {
+        bestBuyerByCategory.push({
+          category,
+          bestBuyer: best.buyer,
+          avgPerLb: Math.round(best.avgPerLb * 100) / 100,
+          loads: best.loads,
+          totalLbs: Math.round(best.totalLbs * 10) / 10,
+        });
+      }
+    }
+    bestBuyerByCategory.sort((a, b) => b.avgPerLb - a.avgPerLb);
 
     return NextResponse.json({
       inboundThisMonth,
@@ -79,6 +139,7 @@ export async function GET() {
       byVendor,
       totalInboundAllTime,
       totalOutboundLbsAllTime,
+      bestBuyerByCategory,
     });
   } catch (error) {
     console.error("Dashboard error:", error);

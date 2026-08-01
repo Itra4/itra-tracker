@@ -17,6 +17,7 @@ interface OutboundShipment {
   category: string;
   downstreamVendor: string;
   weightLbs: number | null;
+  settlementAmount: number | null;
   note?: string;
   pdfFileName?: string;
   createdBy: { name: string };
@@ -34,6 +35,7 @@ export default function OutboundDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [weight, setWeight] = useState("");
+  const [settlementAmount, setSettlementAmount] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -48,6 +50,7 @@ export default function OutboundDetailPage() {
       .then((data) => {
         setShipment(data);
         setWeight(data.weightLbs != null ? String(data.weightLbs) : "");
+        setSettlementAmount(data.settlementAmount != null ? String(data.settlementAmount) : "");
         setNote(data.note || "");
         setLoading(false);
       })
@@ -68,6 +71,7 @@ export default function OutboundDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           weightLbs: weight ? parseFloat(weight) : null,
+          settlementAmount: settlementAmount ? parseFloat(settlementAmount) : null,
           note,
         }),
       });
@@ -76,7 +80,7 @@ export default function OutboundDetailPage() {
 
       const updated = await res.json();
       setShipment((prev) =>
-        prev ? { ...prev, weightLbs: updated.weightLbs, note: updated.note } : null
+        prev ? { ...prev, weightLbs: updated.weightLbs, settlementAmount: updated.settlementAmount, note: updated.note } : null
       );
       setMessage("Saved successfully");
     } catch {
@@ -167,7 +171,7 @@ export default function OutboundDetailPage() {
 
         {/* Weight entry */}
         <form onSubmit={handleSaveWeight} className="card space-y-4">
-          <h2 className="font-semibold text-gray-900">Weight & Notes</h2>
+          <h2 className="font-semibold text-gray-900">Weight, Settlement & Notes</h2>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -181,6 +185,23 @@ export default function OutboundDetailPage() {
               placeholder="Enter weight from buyer PDF"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Settlement Amount ($)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={settlementAmount}
+              onChange={(e) => setSettlementAmount(e.target.value)}
+              placeholder="Total $ paid by buyer"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              From the settlement PDF. Used to calculate $/lb by buyer.
+            </p>
           </div>
 
           <div>
@@ -200,7 +221,7 @@ export default function OutboundDetailPage() {
             disabled={saving}
             className="btn-primary disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Save Weight & Notes"}
+            {saving ? "Saving..." : "Save Weight, Settlement & Notes"}
           </button>
         </form>
 

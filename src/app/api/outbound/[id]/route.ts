@@ -54,7 +54,18 @@ export async function PATCH(
     const updated = await prisma.outboundShipment.update({
       where: { id },
       data: {
-        weightLbs: body.weightLbs != null ? parseFloat(body.weightLbs) : undefined,
+        weightLbs:
+          body.weightLbs !== undefined
+            ? body.weightLbs != null
+              ? parseFloat(body.weightLbs)
+              : null
+            : undefined,
+        settlementAmount:
+          body.settlementAmount !== undefined
+            ? body.settlementAmount != null && body.settlementAmount !== ""
+              ? parseFloat(body.settlementAmount)
+              : null
+            : undefined,
         note: body.note !== undefined ? body.note : undefined,
         category: body.category || undefined,
         downstreamVendor: body.downstreamVendor || undefined,

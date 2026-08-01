@@ -58,6 +58,7 @@ model OutboundShipment {
   category          String
   downstreamVendor  String
   weightLbs         Float?   // null until PDF is processed or manually entered
+  settlementAmount  Float?   // total $ paid by buyer (from settlement PDF)
   note              String?
   pdfFileName       String?
   pdfData           String?  // name of uploaded buyer PDF if any
