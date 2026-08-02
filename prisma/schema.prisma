@@ -39,6 +39,7 @@ model InboundLoad {
   date            DateTime
   clientSource    String
   approximateSize String
+  weightLbs       Float?   // total weight received (from scale ticket)
   notes           String?
 
   // Audit fields
