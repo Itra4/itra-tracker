@@ -12,11 +12,11 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { date, clientSource, approximateSize, notes } = body;
+    const { date, clientSource, approximateSize, weightLbs, notes } = body;
 
     if (!date || !clientSource || !approximateSize) {
       return NextResponse.json(
-        { error: "Date, Client/Source, and Approximate Size are required" },
+        { error: "Date, Client/Source, and Quantity are required" },
         { status: 400 }
       );
     }
@@ -28,17 +28,22 @@ export async function POST(req: NextRequest) {
         date: new Date(date),
         clientSource,
         approximateSize,
+        weightLbs:
+          weightLbs !== undefined && weightLbs !== null && weightLbs !== ""
+            ? parseFloat(weightLbs)
+            : null,
         notes: notes || null,
         createdById: userId,
       },
     });
 
-    // Activity log
     await prisma.activityLog.create({
       data: {
         userId,
         action: "CREATED_INBOUND",
-        details: `Created inbound load from ${clientSource} (${approximateSize})`,
+        details: `Created inbound load from ${clientSource} (${approximateSize})${
+          weightLbs ? ` – ${weightLbs} lbs` : ""
+        }`,
         entityType: "InboundLoad",
         entityId: inbound.id,
       },
