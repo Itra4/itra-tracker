@@ -7,7 +7,22 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      
+    // Inbound weight this month (for mass balance)
+    const inboundWithWeight = await prisma.inboundLoad.findMany({
+      where: {
+        date: { gte: startOfMonth, lte: endOfMonth },
+        weightLbs: { not: null },
+      },
+      select: { weightLbs: true },
+    });
+    const totalInboundLbsThisMonth = inboundWithWeight.reduce(
+      (sum, l) => sum + (l.weightLbs || 0),
+      0
+    );
+    const varianceThisMonth = totalInboundLbsThisMonth - totalOutboundLbs;
+
+return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Current month range
@@ -135,6 +150,8 @@ export async function GET() {
     return NextResponse.json({
       inboundThisMonth,
       totalOutboundLbsThisMonth: totalOutboundLbs,
+      totalInboundLbsThisMonth: Math.round(totalInboundLbsThisMonth * 10) / 10,
+      varianceThisMonth: Math.round(varianceThisMonth * 10) / 10,
       byCategory,
       byVendor,
       totalInboundAllTime,

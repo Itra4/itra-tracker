@@ -10,6 +10,8 @@ interface DashboardData {
   byVendor: Record<string, number>;
   totalInboundAllTime: number;
   totalOutboundLbsAllTime: number;
+  totalInboundLbsThisMonth?: number;
+  varianceThisMonth?: number;
   bestBuyerByCategory?: {
     category: string;
     bestBuyer: string;
@@ -76,7 +78,37 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {/* By Category */}
+            
+            {/* Mass Balance */}
+            <div className="card">
+              <h2 className="font-semibold text-gray-900 mb-3">Mass Balance (This Month)</h2>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <p className="text-xl font-bold text-blue-700">
+                    {(data.totalInboundLbsThisMonth ?? 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500">Inbound lbs</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-green-700">
+                    {data.totalOutboundLbsThisMonth.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500">Outbound lbs</p>
+                </div>
+                <div>
+                  <p className={"text-xl font-bold " + ((data.varianceThisMonth ?? 0) >= 0 ? "text-gray-900" : "text-red-600")}>
+                    {(data.varianceThisMonth ?? 0) >= 0 ? "+" : ""}
+                    {(data.varianceThisMonth ?? 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500">Variance</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mt-3 text-center">
+                Positive variance = material still on hand
+              </p>
+            </div>
+
+{/* By Category */}
             <div className="card">
               <h2 className="font-semibold text-gray-900 mb-3">
                 Outbound by Category (this month)
